@@ -29,7 +29,11 @@ public class PlayerCombat : MonoBehaviour
     private static readonly int AttackEndHash = Animator.StringToHash("AttackEnd");
     private const int MaxCombo = 3;
 
+    // 공격 모션 중인지 (PlayerParry 등 다른 스크립트가 참조)
+    public bool IsAttacking { get; private set; }
+
     private PlayerController player;
+    private PlayerParry parry;   // 없어도 동작함
     private float lastStartTime = -10f;
     private int lastStep;
     private bool nextQueued;     // 다음 콤보 입력이 이미 들어와 있는지
@@ -38,6 +42,7 @@ public class PlayerCombat : MonoBehaviour
     private void Awake()
     {
         player = GetComponent<PlayerController>();
+        parry = GetComponent<PlayerParry>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
     }
 
@@ -55,6 +60,7 @@ public class PlayerCombat : MonoBehaviour
         {
             // 공격 중이 아님 -> Slash1 시작 (바닥에 있을 때만)
             if (!player.IsGrounded) return;
+            if (parry != null && parry.IsParrying) return; // 패링 모션 중에는 공격 불가
             if (Time.time - lastStartTime < 0.1f) return;
 
             lastStartTime = Time.time;
@@ -87,7 +93,8 @@ public class PlayerCombat : MonoBehaviour
         bool inTransition = animator.IsInTransition(0);
 
         // 공격 모션 중에는 이동/점프 잠금 (Idle 로 돌아가는 전환이 시작되면 해제)
-        player.MovementLocked = (step > 0 && !ending) || (Time.time - lastStartTime < 0.1f);
+        IsAttacking = (step > 0 && !ending) || (Time.time - lastStartTime < 0.1f);
+        player.MovementLocked = IsAttacking;
 
         if (step == 0 && !inTransition)
         {

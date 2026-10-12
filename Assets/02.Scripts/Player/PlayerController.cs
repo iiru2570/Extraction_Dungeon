@@ -1,125 +1,101 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// 이동 / 달리기 / 점프 + 카메라 타겟 회전(마우스 룩).
-/// Cinemachine의 Third Person Follow가 cameraTarget의 위치와 회전을 따라간다.
-/// </summary>
+// Player Input 의 Behavior = Invoke Unity Events 용
+// 이동/점프 로직만 담당하고, 애니메이션은 PlayerAnimator, 공격은 PlayerCombat 이 처리합니다.
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    [Header("Input (InputSystem_Actions의 Player 맵)")]
-    [SerializeField] private InputActionReference moveAction;   // Vector2
-    [SerializeField] private InputActionReference lookAction;   // Vector2 (Mouse delta)
-    [SerializeField] private InputActionReference jumpAction;   // Button
-    [SerializeField] private InputActionReference sprintAction; // Button
+    [Header("Move")]
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float rotateSpeed = 12f;
+    [SerializeField] private Transform model;   // X Bot (회전시킬 대상)
 
-    [Header("Movement")]
-    [SerializeField] private float walkSpeed = 3.5f;
-    [SerializeField] private float sprintSpeed = 6f;
-    [SerializeField] private float acceleration = 14f;
-    [SerializeField] private float bodyTurnSpeed = 14f;
-    [SerializeField] private float jumpHeight = 1.2f;
+    [Header("Jump")]
+    [SerializeField] private float jumpHeight = 1.5f;
     [SerializeField] private float gravity = -20f;
 
-    [Header("Camera")]
-    [SerializeField] private Transform cameraTarget;            // Player 자식, 머리 높이(0, 1.6, 0)
-    [SerializeField] private float lookSensitivity = 0.1f;      // 마우스 delta(px) -> 도(degree)
-    [SerializeField] private float minPitch = -30f;
-    [SerializeField] private float maxPitch = 60f;
-    [SerializeField] private bool lockCursor = true;
+    // ---- 다른 스크립트가 읽는 상태 ----
+    public bool IsMoving { get; private set; }
+    public bool IsGrounded => controller != null && controller.isGrounded;
+    public float VerticalVelocity => verticalVelocity;
+    public float MoveSpeedNormalized { get; private set; }   // 0 ~ 1
 
-    /// <summary>스태미나 시스템이 생기면 여기서 달리기 허용 여부를 제어한다.</summary>
-    public bool SprintAllowed { get; set; } = true;
+    // true 이면 이동/점프 입력을 무시합니다 (공격 중 등). 중력은 계속 적용됩니다.
+    public bool MovementLocked { get; set; }
 
-    /// <summary>애니메이터 / 스태미나 연동용 읽기 전용 상태.</summary>
-    public bool IsSprinting { get; private set; }
-    public bool IsGrounded => controller.isGrounded;
-    public float HorizontalSpeed => new Vector3(velocity.x, 0f, velocity.z).magnitude;
-
-    /// <summary>카메라가 바라보는 수평 방향 (공격 / 조준 방향에 사용).</summary>
-    public Vector3 AimForward => Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+    // ---- 이벤트 ----
+    public event Action Jumped;
 
     private CharacterController controller;
-    private Vector3 velocity;   // x,z = 수평 속도, y = 수직 속도
-    private float yaw;
-    private float pitch;
+    private Vector2 moveInput;
+    private float verticalVelocity;
+    private Transform cam;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-        yaw = transform.eulerAngles.y;
+        if (Camera.main != null) cam = Camera.main.transform;
+        if (model == null && transform.childCount > 0) model = transform.GetChild(0);
     }
 
-    private void OnEnable()
+    // Events > Player > Move 에 연결
+    public void OnMove(InputAction.CallbackContext context)
     {
-        moveAction.action.Enable();
-        lookAction.action.Enable();
-        jumpAction.action.Enable();
-        sprintAction.action.Enable();
+        moveInput = context.ReadValue<Vector2>();
+    }
 
-        if (lockCursor)
+    // Events > Player > Jump 에 연결
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (MovementLocked) return; // 공격 중에는 점프 불가
+
+        // 누른 순간에만, 바닥에 있을 때만 점프 (더블점프 불가)
+        if (context.performed && controller.isGrounded)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            Jumped?.Invoke();
         }
     }
 
-    private void OnDisable()
+    // 모델이 카메라가 보는 방향(수평)을 바라보게 합니다. (공격 시작 시 사용)
+    public void FaceCameraDirection()
     {
-        moveAction.action.Disable();
-        lookAction.action.Disable();
-        jumpAction.action.Disable();
-        sprintAction.action.Disable();
+        if (cam == null || model == null) return;
+        Vector3 f = Vector3.ProjectOnPlane(cam.forward, Vector3.up);
+        if (f.sqrMagnitude > 0.001f)
+            model.rotation = Quaternion.LookRotation(f.normalized);
     }
 
     private void Update()
     {
-        HandleLook();
-        HandleMove();
-    }
+        Vector2 input = MovementLocked ? Vector2.zero : moveInput;
 
-    private void LateUpdate()
-    {
-        // 부모(Player)가 회전해도 카메라 타겟은 독립적으로 yaw/pitch를 유지한다.
-        cameraTarget.rotation = Quaternion.Euler(pitch, yaw, 0f);
-    }
+        // 카메라 기준 이동 방향
+        Vector3 forward = cam ? Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized : Vector3.forward;
+        Vector3 right = cam ? Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized : Vector3.right;
+        Vector3 moveDir = forward * input.y + right * input.x;
+        if (moveDir.sqrMagnitude > 1f) moveDir.Normalize();
 
-    private void HandleLook()
-    {
-        Vector2 look = lookAction.action.ReadValue<Vector2>();
-        // 마우스 delta는 이미 프레임 간 변화량이므로 Time.deltaTime을 곱하지 않는다.
-        yaw += look.x * lookSensitivity;
-        pitch = Mathf.Clamp(pitch - look.y * lookSensitivity, minPitch, maxPitch);
-    }
+        // 중력 / 착지 처리
+        if (controller.isGrounded && verticalVelocity < 0f)
+            verticalVelocity = -2f;
+        verticalVelocity += gravity * Time.deltaTime;
 
-    private void HandleMove()
-    {
-        Vector2 input = moveAction.action.ReadValue<Vector2>();
-        bool hasInput = input.sqrMagnitude > 0.01f;
-
-        // 카메라 yaw 기준으로 이동 방향 계산
-        Quaternion yawRot = Quaternion.Euler(0f, yaw, 0f);
-        Vector3 wishDir = yawRot * new Vector3(input.x, 0f, input.y);
-        if (wishDir.sqrMagnitude > 1f) wishDir.Normalize();
-
-        IsSprinting = hasInput && SprintAllowed && sprintAction.action.IsPressed();
-        float targetSpeed = IsSprinting ? sprintSpeed : walkSpeed;
-
-        Vector3 horizontal = new Vector3(velocity.x, 0f, velocity.z);
-        horizontal = Vector3.MoveTowards(horizontal, wishDir * targetSpeed, acceleration * Time.deltaTime);
-
-        // 점프 / 중력
-        if (controller.isGrounded && velocity.y < 0f) velocity.y = -2f;
-        if (controller.isGrounded && jumpAction.action.WasPressedThisFrame())
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        velocity.y += gravity * Time.deltaTime;
-
-        velocity = new Vector3(horizontal.x, velocity.y, horizontal.z);
+        Vector3 velocity = moveDir * moveSpeed;
+        velocity.y = verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
 
-        // 몸은 항상 카메라가 보는 방향을 향함 (마우스 조준 기반 전투용)
-        transform.rotation = Quaternion.Slerp(
-            transform.rotation, yawRot, bodyTurnSpeed * Time.deltaTime);
+        // 상태 갱신
+        IsMoving = moveDir.sqrMagnitude > 0.001f;
+        MoveSpeedNormalized = moveDir.magnitude;
+
+        // 이동 방향으로 모델 회전
+        if (model != null && IsMoving)
+        {
+            Quaternion target = Quaternion.LookRotation(moveDir);
+            model.rotation = Quaternion.Slerp(model.rotation, target, rotateSpeed * Time.deltaTime);
+        }
     }
 }

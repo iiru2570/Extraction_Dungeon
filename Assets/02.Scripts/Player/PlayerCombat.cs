@@ -240,7 +240,7 @@ public class PlayerCombat : MonoBehaviour
     {
         if (info.IsName("Slash1")) return 1;
         if (info.IsName("Slash2")) return 2;
-        if (info.IsName("Slash3")) return 3;
+        if (info.IsName("Casting")) return 3;
         return 0;
     }
 }

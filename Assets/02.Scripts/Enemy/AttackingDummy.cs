@@ -5,7 +5,8 @@ using UnityEngine;
 //  - 이동 없이 제자리에서 플레이어를 바라보며, 사거리 안이면 공격
 //  - 예고(Telegraph): 몸이 색으로 번쩍임 (패링 유도 공격 = 붉은색 / 일반 공격 = 노란색)
 //  - 공격(Strike): SwingPivot 이 휘둘러지고, 그동안만 칼 WeaponHitbox 가 켜져 데미지
-//  - 후딜(Recover): 무방비 (나중에 패링 성공 시 그로기로 확장)
+//  - 후딜(Recover): 무방비
+//  - 그로기(Groggy): 패링을 당하면 공격이 끊기고 잠시 무방비 + 받는 피해 증가 (청록색)
 //
 // 설정 (Hierarchy)
 //  Dummy (Health, AttackingDummy, Capsule Collider)
@@ -13,9 +14,9 @@ using UnityEngine;
 //       └ Sword (Cube, 앞쪽으로 길게: 예) Position (0, 0, 1) Scale (0.2, 0.2, 1.5), WeaponHitbox)
 //  - Sword 의 WeaponHitbox: Owner = Dummy, Hit Mask = Player 레이어만
 [RequireComponent(typeof(Health))]
-public class AttackingDummy : MonoBehaviour
+public class AttackingDummy : MonoBehaviour, IParryable, IDamageInterceptor
 {
-    public enum State { Idle, Telegraph, Strike, Recover }
+    public enum State { Idle, Telegraph, Strike, Recover, Groggy }
 
     [Header("Weapon")]
     [SerializeField] private WeaponHitbox weapon;
@@ -31,6 +32,14 @@ public class AttackingDummy : MonoBehaviour
     [SerializeField] private float recoverTime = 0.6f;         // 공격 후 무방비 시간
     [SerializeField] private float cooldown = 1.5f;            // 다음 공격 전 대기
 
+    [Header("Groggy (패링당했을 때)")]
+    [Tooltip("패링 유도 공격(붉은 예고)을 패링당했을 때 그로기 시간")]
+    [SerializeField] private float groggyTimeBait = 2f;
+    [Tooltip("일반 공격(노란 예고)을 패링당했을 때 그로기 시간")]
+    [SerializeField] private float groggyTimeNormal = 0.8f;
+    [Tooltip("그로기 중 받는 피해 배율")]
+    [SerializeField] private float groggyDamageMultiplier = 2f;
+
     [Header("Targeting")]
     [SerializeField] private float attackRange = 3f;
     [SerializeField] private float turnSpeed = 360f;           // 초당 회전 각도 (예고 중까지만 조준)
@@ -40,6 +49,7 @@ public class AttackingDummy : MonoBehaviour
     [SerializeField] private bool parryBait = true;
     [SerializeField] private Color parryBaitColor = Color.red;
     [SerializeField] private Color normalColor = Color.yellow;
+    [SerializeField] private Color groggyColor = Color.cyan;
     [SerializeField] private Color hitColor = Color.white;
     [SerializeField] private float hitFlashTime = 0.1f;
     [SerializeField] private Renderer targetRenderer;          // 비우면 자식에서 자동 검색
@@ -49,12 +59,14 @@ public class AttackingDummy : MonoBehaviour
     public State Current { get; private set; } = State.Idle;
     public bool IsTelegraphing => Current == State.Telegraph;
     public bool IsStriking => Current == State.Strike;
+    public bool IsGroggy => Current == State.Groggy;
     public bool IsParryBait => parryBait;
 
     // 연출(사운드, 이펙트)이 구독
     public event Action Telegraphed;
     public event Action StrikeStarted;
     public event Action StrikeEnded;
+    public event Action Groggied;
 
     private Health health;
     private Transform target;
@@ -66,6 +78,7 @@ public class AttackingDummy : MonoBehaviour
     private float cooldownTimer;
     private float hitFlashTimer;
     private float respawnTimer;
+    private float groggyDuration;
     private bool colored;
 
     private void Awake()
@@ -100,6 +113,25 @@ public class AttackingDummy : MonoBehaviour
         respawnTimer = respawnDelay;
     }
 
+    // 패링을 당함 (PlayerParry 가 호출): 공격을 끊고 그로기
+    public void OnParried(Transform parrier)
+    {
+        if (health.IsDead) return;
+
+        EndStrike();   // 아직 Strike 상태일 때 호출해야 StrikeEnded 가 발생
+        Current = State.Groggy;
+        stateTimer = 0f;
+        groggyDuration = parryBait ? groggyTimeBait : groggyTimeNormal;
+        Groggied?.Invoke();
+    }
+
+    // Health.TakeDamage 직전에 호출: 그로기 중에는 받는 피해 증가
+    public bool Intercept(ref DamageInfo info)
+    {
+        if (Current == State.Groggy) info.amount *= groggyDamageMultiplier;
+        return true;
+    }
+
     private void Update()
     {
         if (health.IsDead)
@@ -128,6 +160,7 @@ public class AttackingDummy : MonoBehaviour
             case State.Telegraph: UpdateTelegraph(); break;
             case State.Strike: UpdateStrike(); break;
             case State.Recover: UpdateRecover(); break;
+            case State.Groggy: UpdateGroggy(); break;
         }
 
         ApplyColor();
@@ -184,6 +217,15 @@ public class AttackingDummy : MonoBehaviour
         cooldownTimer = cooldown;
     }
 
+    private void UpdateGroggy()
+    {
+        stateTimer += Time.deltaTime;
+        if (stateTimer < groggyDuration) return;
+
+        Current = State.Idle;
+        cooldownTimer = cooldown;
+    }
+
     private void EndStrike()
     {
         if (weapon != null) weapon.SetActive(false);
@@ -219,7 +261,7 @@ public class AttackingDummy : MonoBehaviour
         return d.magnitude;
     }
 
-    // ---- 색 표현 (예고 색 > 피격 번쩍임 > 원래 색) ----
+    // ---- 색 표현 (사망 > 예고 > 피격 번쩍임 > 그로기 > 원래 색) ----
 
     private void ApplyColor()
     {
@@ -236,6 +278,10 @@ public class AttackingDummy : MonoBehaviour
         else if (hitFlashTimer > 0f)
         {
             SetColor(hitColor);
+        }
+        else if (Current == State.Groggy)
+        {
+            SetColor(groggyColor);
         }
         else if (colored)
         {

@@ -9,8 +9,12 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Move")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float rotateSpeed = 12f;
+    [SerializeField] private float rotateSpeed = 12f;   // 정면 고정을 끈 경우에만 사용 (이동 방향으로 회전)
     [SerializeField] private Transform model;   // X Bot (회전시킬 대상)
+
+    [Header("Facing")]
+    [Tooltip("켜면 캐릭터가 항상 카메라가 보는 방향(수평)을 바라봅니다. 이동해도 몸은 돌지 않고 옆/뒤로 움직입니다.")]
+    [SerializeField] private bool faceCameraAlways = true;
 
     [Header("Jump")]
     [SerializeField] private float jumpHeight = 1.5f;
@@ -59,7 +63,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // 모델이 카메라가 보는 방향(수평)을 바라보게 합니다. (공격 시작 시 사용)
+    // 모델이 카메라가 보는 방향(수평)을 바라보게 합니다.
     public void FaceCameraDirection()
     {
         if (cam == null || model == null) return;
@@ -91,9 +95,17 @@ public class PlayerController : MonoBehaviour
         IsMoving = moveDir.sqrMagnitude > 0.001f;
         MoveSpeedNormalized = moveDir.magnitude;
 
-        // 이동 방향으로 모델 회전
-        if (model != null && IsMoving)
+        // 방향 처리
+        if (model == null) return;
+
+        if (faceCameraAlways)
         {
+            // 항상 카메라 정면 고정 (이동/공격/가드 모두 동일)
+            FaceCameraDirection();
+        }
+        else if (IsMoving)
+        {
+            // 이동 방향으로 모델 회전
             Quaternion target = Quaternion.LookRotation(moveDir);
             model.rotation = Quaternion.Slerp(model.rotation, target, rotateSpeed * Time.deltaTime);
         }

@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 
 // 체력 컴포넌트. 플레이어 / 몬스터 / 보스 / 훈련 더미 모두 이걸 붙여서 사용합니다.
-// 가드, 패링 같은 피해 보정은 나중에 TakeDamage 앞단(예: PlayerGuard)에서 처리하고,
-// 최종 피해만 여기로 넘기면 됩니다.
+// 같은 오브젝트에 IDamageInterceptor(PlayerParry 등)가 있으면, 데미지 적용 직전에 호출해
+// 가드 감소 / 패링 무효 같은 보정을 먼저 거칩니다.
 public class Health : MonoBehaviour, IDamageable
 {
     [SerializeField] private float maxHealth = 100f;
@@ -13,18 +13,41 @@ public class Health : MonoBehaviour, IDamageable
     public float Current { get; private set; }
     public bool IsDead { get; private set; }
 
-    // 체력 바 UI, 피격 이펙트, 사망 처리 등이 구독
+    // 무적 중인지 (피격 직후 등)
+    public bool IsInvulnerable => Time.time < invulnerableUntil;
+
+    // 체력 바 UI, 피격 이펙트, 사망 처리 등이 구독 (보정이 끝난 최종 피해 기준)
     public event Action<DamageInfo> Damaged;
     public event Action Died;
+
+    private IDamageInterceptor[] interceptors;
+    private float invulnerableUntil = -10f;
 
     private void Awake()
     {
         Current = maxHealth;
+        interceptors = GetComponents<IDamageInterceptor>();
+    }
+
+    // duration 초 동안 피해를 받지 않음 (이미 더 긴 무적이 있으면 그대로 유지)
+    public void SetInvulnerable(float duration)
+    {
+        invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration);
     }
 
     public void TakeDamage(DamageInfo info)
     {
         if (IsDead || info.amount <= 0f) return;
+
+        // 가드 / 패링 / 그로기 보정 (패링은 무적 시간 중에도 먼저 처리됨)
+        foreach (var interceptor in interceptors)
+        {
+            if (!interceptor.Intercept(ref info)) return;   // 피해 무효
+        }
+        if (info.amount <= 0f) return;
+
+        // 피격 직후 무적 시간
+        if (IsInvulnerable) return;
 
         Current = Mathf.Max(0f, Current - info.amount);
         if (logDamage)
@@ -49,5 +72,6 @@ public class Health : MonoBehaviour, IDamageable
     {
         Current = maxHealth;
         IsDead = false;
+        invulnerableUntil = -10f;
     }
 }

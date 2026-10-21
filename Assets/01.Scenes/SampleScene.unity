@@ -421,6 +421,11 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!95 &584126955 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 2967191656820309721, guid: c2454b76487357a45b1c93b244c1bcd3, type: 3}
+  m_PrefabInstance: {fileID: 3047667893522963488}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &584126956 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2808200283019303682, guid: c2454b76487357a45b1c93b244c1bcd3, type: 3}
@@ -646,6 +651,25 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
+--- !u!114 &709313879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 709313868}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0b060fbca5cdb348b6ce1e79925038f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHitReaction
+  animator: {fileID: 584126955}
+  staggerTime: 0.5
+  invulnerableTime: 0.6
+  superArmorDuringCounter: 0
+  hitStateName: Hit
+  idleStateName: Great Sword Idle
+  returnGrace: 0.3
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1353,6 +1377,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8939569490815071896, guid: c2454b76487357a45b1c93b244c1bcd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 709313878}
+    - targetCorrespondingSourceObject: {fileID: 8939569490815071896, guid: c2454b76487357a45b1c93b244c1bcd3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 709313879}
   m_SourcePrefab: {fileID: 100100000, guid: c2454b76487357a45b1c93b244c1bcd3, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

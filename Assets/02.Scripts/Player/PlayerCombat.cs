@@ -17,6 +17,8 @@ using UnityEngine.InputSystem;
 // 반격: 패링에 성공하면(PlayerParry.CanRiposte) 좌클릭 즉시 Counter 트리거가 발동해
 //       패링 모션을 끊고 Slash1 없이 ComboSlash 로 바로 들어갑니다.
 //
+// 피격: PlayerHitReaction 이 경직 중이면 공격할 수 없고, 피해를 입으면 CancelAttack 으로 공격이 끊깁니다.
+//
 // 타격 방식: 손에 붙은 칼의 WeaponHitbox 가 실제로 데미지를 줍니다.
 //  - 이 스크립트는 공격 모션 중 "판정 구간"에만 칼 콜라이더를 켜고, 단계별 피해량을 넘겨줍니다.
 //  - ComboSlash 는 한 모션에 3번 베는 애니메이션이라, 판정 구간을 0~1(전체)로 두고
@@ -72,11 +74,15 @@ public class PlayerCombat : MonoBehaviour
     // 공격 모션 중인지 (PlayerParry 등 다른 스크립트가 참조)
     public bool IsAttacking { get; private set; }
 
+    // 패링 후 반격(ComboSlash)으로 진행 중인지 (PlayerHitReaction 의 슈퍼 아머가 참조)
+    public bool IsCountering { get; private set; }
+
     // 타격 성공 이벤트 (히트스톱, 사운드, 이펙트가 구독). 칼의 Hit 이벤트를 그대로 전달합니다.
     public event System.Action<IDamageable, DamageInfo> Hit;
 
     private PlayerController player;
-    private PlayerParry parry;   // 없어도 동작함
+    private PlayerParry parry;               // 없어도 동작함
+    private PlayerHitReaction hitReaction;   // 없어도 동작함
     private float lastStartTime = -10f;
     private int lastStep;
     private bool nextQueued;     // 다음 콤보 입력이 이미 들어와 있는지
@@ -88,6 +94,7 @@ public class PlayerCombat : MonoBehaviour
     {
         player = GetComponent<PlayerController>();
         parry = GetComponent<PlayerParry>();
+        hitReaction = GetComponent<PlayerHitReaction>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (weapon == null) weapon = GetComponentInChildren<WeaponHitbox>(true);
         if (weapon == null)
@@ -118,6 +125,9 @@ public class PlayerCombat : MonoBehaviour
         // 커서가 풀려 있을 때(ESC 이후 화면 클릭으로 다시 잠글 때)는 공격하지 않음
         if (Cursor.lockState != CursorLockMode.Locked) return;
 
+        // 피격 경직 중에는 공격 불가
+        if (hitReaction != null && hitReaction.IsStaggered) return;
+
         // 패링 성공 직후: 패링 모션 중이어도 Slash1 을 건너뛰고 바로 ComboSlash
         if (parry != null && parry.CanRiposte && player.IsGrounded)
         {
@@ -139,6 +149,7 @@ public class PlayerCombat : MonoBehaviour
             endRequested = false;
             swingStep = 0;          // 새 콤보: 다음 판정 구간에서 칼 기록 초기화
             windowOpen = false;
+            IsCountering = false;
             if (faceCameraOnAttack) player.FaceCameraDirection();
             animator.ResetTrigger(AttackNextHash);
             animator.ResetTrigger(AttackEndHash);
@@ -169,12 +180,33 @@ public class PlayerCombat : MonoBehaviour
         endRequested = false;
         swingStep = 0;              // 새 스윙: 칼 기록 초기화
         windowOpen = false;
+        IsCountering = true;
         if (faceCameraOnAttack) player.FaceCameraDirection();
 
         animator.ResetTrigger(AttackStartHash);
         animator.ResetTrigger(AttackNextHash);
         animator.ResetTrigger(AttackEndHash);
         animator.SetTrigger(CounterHash);
+    }
+
+    // 피격 등으로 진행 중인 공격을 즉시 끊음 (칼 끄기, 대기 중인 입력/트리거 제거)
+    public void CancelAttack()
+    {
+        nextQueued = false;
+        endRequested = false;
+        swingStep = 0;
+        windowOpen = false;
+        IsCountering = false;
+        lastStartTime = -10f;   // 막 시작한 공격의 보호 시간 해제
+
+        if (animator != null)
+        {
+            animator.ResetTrigger(AttackStartHash);
+            animator.ResetTrigger(AttackNextHash);
+            animator.ResetTrigger(AttackEndHash);
+            animator.ResetTrigger(CounterHash);
+        }
+        SetWeaponActive(false);
     }
 
     private void Update()
@@ -184,9 +216,10 @@ public class PlayerCombat : MonoBehaviour
         ReadState(out int step, out bool ending);
         bool inTransition = animator.IsInTransition(0);
 
-        // 공격 모션 중에는 이동/점프 잠금 (Idle 로 돌아가는 전환이 시작되면 해제)
+        // 공격 모션 중 / 피격 경직 중에는 이동/점프 잠금 (Idle 로 돌아가는 전환이 시작되면 해제)
         IsAttacking = (step > 0 && !ending) || (Time.time - lastStartTime < 0.1f);
-        player.MovementLocked = IsAttacking;
+        bool staggered = hitReaction != null && hitReaction.IsStaggered;
+        player.MovementLocked = IsAttacking || staggered;
 
         if (step == 0 && !inTransition)
         {
@@ -194,7 +227,11 @@ public class PlayerCombat : MonoBehaviour
             animator.ResetTrigger(AttackNextHash);
             animator.ResetTrigger(AttackEndHash);
             // 반격 트리거는 방금 눌렀다면 Animator 가 전환할 시간을 줘야 하므로, 잠시 지난 뒤에만 정리
-            if (Time.time - lastStartTime > 0.3f) animator.ResetTrigger(CounterHash);
+            if (Time.time - lastStartTime > 0.3f)
+            {
+                animator.ResetTrigger(CounterHash);
+                IsCountering = false;
+            }
             nextQueued = false;
             endRequested = false;
             lastStep = 0;

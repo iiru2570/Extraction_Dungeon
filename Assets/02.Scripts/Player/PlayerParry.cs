@@ -60,6 +60,7 @@ public class PlayerParry : MonoBehaviour, IDamageInterceptor
 
     private PlayerController player;
     private PlayerCombat combat;   // 없어도 동작함
+    private PlayerHitReaction hitReaction;   // 없어도 동작함
     private float lastPressTime = -10f;
     private bool windowArmed;      // 이번 모션에서 무적 구간이 유효한지
     private bool parryTriggered;   // 이번 모션에서 이미 패링 반응(그로기 등)을 보냈는지
@@ -72,6 +73,7 @@ public class PlayerParry : MonoBehaviour, IDamageInterceptor
     {
         player = GetComponent<PlayerController>();
         combat = GetComponent<PlayerCombat>();
+        hitReaction = GetComponent<PlayerHitReaction>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
     }
 
@@ -84,6 +86,7 @@ public class PlayerParry : MonoBehaviour, IDamageInterceptor
         if (Cursor.lockState != CursorLockMode.Locked) return;
 
         if (!player.IsGrounded) return;                              // 공중에서는 불가
+        if (hitReaction != null && hitReaction.IsStaggered) return;  // 피격 경직 중에는 불가
         if (combat != null && combat.IsAttacking) return;            // 공격 중에는 불가
         if (IsGuarding) return;                                      // 이미 패링 모션 중에는 불가
 

@@ -223,10 +223,10 @@ MonoBehaviour:
   strikeTime: 1.5
   recoverTime: 0.7
   cooldown: 1.2
-  groggyTime: 3
+  groggyTime: 2.5
   groggyDamageMultiplier: 2
   animator: {fileID: 0}
-  destroyOnDeath: 0
+  destroyOnDeath: 1
   deathStateName: Death
   deathLingerTime: 1.5
   deathMaxWait: 8

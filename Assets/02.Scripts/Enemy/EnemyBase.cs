@@ -22,8 +22,10 @@ using UnityEngine.AI;
 //  OnStrikeUpdate(t)       공격 중 매 프레임 (t = 0~1). 돌진 이동 등
 //  OnStrikeEnd()           공격 판정 종료 (패링당해 끊겨도 호출됨)
 //  OnGroggyBegin()         그로기 시작
+//  OnParried(parrier)      패링당함 (Day 2: virtual. 원거리 해골이 그로기 여부를 옵션으로 바꿈)
 //  OnDeath()               사망
 //  OnNoticed()             플레이어를 처음 발견
+//  UsesMeleeWeapon         근접 WeaponHitbox 를 쓰는지 (원거리 몬스터는 false -> 무기 없음 경고 생략)
 //  Awake / Start / OnEnable / OnDisable / Update 도 override 가능 (반드시 base.XXX() 호출)
 //
 // 공통 설정 (Hierarchy)
@@ -150,6 +152,10 @@ public abstract class EnemyBase : MonoBehaviour, IParryable, IDamageInterceptor
 
     // ================= 자식이 override 하는 훅 =================
 
+    // 근접 WeaponHitbox 를 쓰는 몬스터인지. 원거리 몬스터(SkeletonArcherAI)는 false 로 바꿔서
+    // "WeaponHitbox 를 찾지 못했습니다" 경고를 생략합니다. (Day 2 추가)
+    protected virtual bool UsesMeleeWeapon => true;
+
     // 공격을 시작할 조건. 돌진형은 사거리를 넓히고, 정예는 추가 조건을 붙이는 식으로 바꿉니다.
     protected virtual bool CanAttackNow()
         => canSee && cooldownTimer <= 0f && FlatDistance(target.position) <= attackRange;
@@ -198,7 +204,7 @@ public abstract class EnemyBase : MonoBehaviour, IParryable, IDamageInterceptor
 
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (weapon == null) weapon = GetComponentInChildren<WeaponHitbox>(true);
-        if (weapon == null)
+        if (weapon == null && UsesMeleeWeapon)
             Debug.LogWarning($"[{name}] WeaponHitbox 를 찾지 못했습니다. 공격 부위에 WeaponHitbox 를 붙여주세요.");
 
         if (animator != null)
@@ -261,7 +267,8 @@ public abstract class EnemyBase : MonoBehaviour, IParryable, IDamageInterceptor
     }
 
     // 패링을 당함 (PlayerParry 가 호출): 공격을 끊고 그로기
-    public void OnParried(Transform parrier)
+    // Day 2: virtual. 자식이 override 해서 그로기 여부를 바꿀 수 있음 (그로기를 원하면 base.OnParried 호출)
+    public virtual void OnParried(Transform parrier)
     {
         if (health.IsDead) return;
 

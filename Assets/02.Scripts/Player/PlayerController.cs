@@ -53,7 +53,7 @@ public class PlayerController : MonoBehaviour
     // Events > Player > Jump 에 연결
     public void OnJump(InputAction.CallbackContext context)
     {
-        if (MovementLocked) return; // 공격 중에는 점프 불가
+        if (MovementLocked || UIState.IsOpen) return; // 공격 중 / UI 열림 중에는 점프 불가
 
         // 누른 순간에만, 바닥에 있을 때만 점프 (더블점프 불가)
         if (context.performed && controller.isGrounded)
@@ -74,7 +74,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        Vector2 input = MovementLocked ? Vector2.zero : moveInput;
+        Vector2 input = (MovementLocked || UIState.IsOpen) ? Vector2.zero : moveInput;
 
         // 카메라 기준 이동 방향
         Vector3 forward = cam ? Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized : Vector3.forward;

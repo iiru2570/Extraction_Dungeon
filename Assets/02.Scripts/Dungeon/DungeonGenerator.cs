@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.AI;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 /// <summary>
-/// 던전 생성 알고리즘 (Day 3). 프리팹 배치는 Day 4 에서 이 데이터를 사용한다.
+/// 던전 생성 알고리즘 (Day 3) + 방 프리팹 배치 / 문 막기 / NavMesh 빌드 / 플레이어 배치 (Day 4).
 ///
 /// 흐름:
 ///  1) 격자 가장자리 한 칸에 입구방 배치
@@ -42,12 +43,43 @@ public class DungeonGenerator : MonoBehaviour
     [Header("실행")]
     [SerializeField] private bool generateOnStart = true;
 
+    [Header("방 프리팹 (Day 4)")]
+    [SerializeField] private GameObject entrancePrefab;
+    [Tooltip("일반방 변형들 (A~D). 방마다 이 중 하나가 시드에 따라 선택된다")]
+    [SerializeField] private GameObject[] normalPrefabs;
+    [SerializeField] private GameObject treasurePrefab;
+    [SerializeField] private GameObject bossPrefab;
+    [Tooltip("방 한 칸의 크기(m). 프리팹의 바닥 크기와 같아야 한다 (기본 20). Gizmo 칸 크기도 이 값을 쓴다")]
+    [SerializeField, Min(1f)] private float roomSize = 20f;
+    [Tooltip("생성된 방이 자식으로 들어갈 부모 (GeneratedRooms). 비우면 NavMesh 오브젝트, 그것도 없으면 이 오브젝트")]
+    [SerializeField] private Transform roomParent;
+    [Tooltip("GeneratedRooms 에 붙인 DungeonNavMesh. 방을 만든 뒤 NavMesh 를 빌드한다")]
+    [SerializeField] private DungeonNavMesh navMesh;
+
+    [Header("플레이어 배치 (Day 4)")]
+    [Tooltip("비우면 씬에서 PlayerController 를 찾아 사용")]
+    [SerializeField] private Transform player;
+
+    [Header("검증용 몬스터 (Day 7 에 RoomSpawner 가 대체)")]
+    [Tooltip("일반/보물/보스방의 MonsterSpawn 위치에 생성할 몬스터 (좀비 프리팹 등). 비우면 생성 안 함")]
+    [SerializeField] private GameObject testMonsterPrefab;
+    [SerializeField, Range(0f, 1f)] private float testMonsterChance = 1f;
+
     [Header("Gizmo")]
-    [SerializeField, Min(1f)] private float cellSize = 4f;
     [SerializeField] private bool showLabels = true;
+
+    /// <summary>Gizmo 칸 크기 = 방 크기.</summary>
+    private float cellSize => roomSize;
 
     private List<RoomData> rooms = new List<RoomData>();
     private Dictionary<Vector2Int, RoomData> roomMap = new Dictionary<Vector2Int, RoomData>();
+
+    // Day 4: 실제로 생성된 방 오브젝트
+    private readonly Dictionary<Vector2Int, Room> spawnedRooms = new Dictionary<Vector2Int, Room>();
+    private Transform monsterParent;
+
+    /// <summary>방 배치 + NavMesh 빌드 + 플레이어 배치까지 끝났을 때 (Day 7 RoomSpawner 등이 구독).</summary>
+    public event Action DungeonBuilt;
 
     // ---------- 외부(Day 4) 에서 읽는 값 ----------
     public IReadOnlyList<RoomData> Rooms => rooms;
@@ -63,11 +95,24 @@ public class DungeonGenerator : MonoBehaviour
         return r;
     }
 
+    /// <summary>실제로 생성된 방 오브젝트 (Build Dungeon 이후). 없으면 null.</summary>
+    public Room GetSpawnedRoom(Vector2Int pos)
+    {
+        spawnedRooms.TryGetValue(pos, out var r);
+        return r;
+    }
+
+    /// <summary>격자 좌표 -> 월드 좌표 (방 바닥 정중앙, y = 생성기 높이). x -> X, y -> Z.</summary>
+    public Vector3 RoomToWorld(Vector2Int gridPos)
+    {
+        return transform.position + new Vector3(gridPos.x * roomSize, 0f, gridPos.y * roomSize);
+    }
+
     // ---------- 진입점 ----------
 
     private void Start()
     {
-        if (generateOnStart) Generate();
+        if (generateOnStart) BuildDungeon();
     }
 
     private void OnValidate()
@@ -106,6 +151,218 @@ public class DungeonGenerator : MonoBehaviour
                   $"입구 {Entrance.Position} | 보스 {boss.Position} (거리 {boss.Distance}) | 보물 {treasureText}\n" +
                   BuildAscii(rooms));
         return true;
+    }
+
+    // ---------- 실제 던전 만들기 (Day 4) ----------
+
+    /// <summary>
+    /// 던전 데이터 생성 -> 이전 던전 제거 -> 방 프리팹 배치(문 Blocker 처리) -> NavMesh 빌드
+    /// -> 플레이어 배치 -> 검증용 몬스터 생성. Play 모드 전용.
+    /// 몬스터는 NavMesh 가 만들어진 뒤에 생성해야 NavMeshAgent 가 정상 동작한다.
+    /// </summary>
+    [ContextMenu("Build Dungeon (Play Mode)")]
+    public bool BuildDungeon()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[Dungeon] 실제 방 생성은 Play 모드에서만 실행합니다. (에디터의 Generate 는 Gizmo 확인용)");
+            return false;
+        }
+
+        if (!CheckPrefabs(out string prefabError))
+        {
+            Debug.LogError($"[Dungeon] 방 프리팹 설정 오류: {prefabError}", this);
+            return false;
+        }
+
+        if (!Generate()) return false;
+
+        ClearDungeon();
+        SpawnRooms();
+
+        if (navMesh != null) navMesh.Build();
+        else Debug.LogWarning("[Dungeon] Nav Mesh 가 연결되지 않아 NavMesh 를 빌드하지 못했습니다.", this);
+
+        PlacePlayer();
+        SpawnTestMonsters();
+        ValidateNavigation();
+
+        DungeonBuilt?.Invoke();
+        return true;
+    }
+
+    private bool CheckPrefabs(out string error)
+    {
+        if (entrancePrefab == null) { error = "Entrance Prefab 이 비어 있습니다."; return false; }
+        if (treasurePrefab == null) { error = "Treasure Prefab 이 비어 있습니다."; return false; }
+        if (bossPrefab == null) { error = "Boss Prefab 이 비어 있습니다."; return false; }
+        if (normalPrefabs == null || normalPrefabs.Length == 0) { error = "Normal Prefabs 가 비어 있습니다."; return false; }
+        for (int i = 0; i < normalPrefabs.Length; i++)
+        {
+            if (normalPrefabs[i] == null) { error = $"Normal Prefabs[{i}] 가 비어 있습니다."; return false; }
+        }
+        error = null;
+        return true;
+    }
+
+    /// <summary>이전에 만든 방/몬스터를 제거한다. 같은 프레임 NavMesh 빌드에 포함되지 않도록 먼저 비활성화한다.</summary>
+    private void ClearDungeon()
+    {
+        foreach (var room in spawnedRooms.Values)
+        {
+            if (room == null) continue;
+            room.gameObject.SetActive(false);
+            Destroy(room.gameObject);
+        }
+        spawnedRooms.Clear();
+
+        if (monsterParent != null)
+        {
+            monsterParent.gameObject.SetActive(false);
+            Destroy(monsterParent.gameObject);
+            monsterParent = null;
+        }
+    }
+
+    private void SpawnRooms()
+    {
+        Transform parent = roomParent != null ? roomParent : (navMesh != null ? navMesh.transform : transform);
+
+        // 방 변형 선택은 시드에서 파생 -> 같은 시드면 같은 방 구성
+        var rng = new System.Random(unchecked(lastSeed * 31 + 7));
+
+        foreach (var data in rooms)
+        {
+            var prefab = PickPrefab(data.Type, rng);
+            var go = Instantiate(prefab, RoomToWorld(data.Position), Quaternion.identity, parent);
+            go.name = $"{prefab.name}_{data.Position.x}_{data.Position.y}";
+
+            if (!go.TryGetComponent(out Room room)) room = go.AddComponent<Room>();
+            room.Setup(data);
+            spawnedRooms[data.Position] = room;
+        }
+    }
+
+    private GameObject PickPrefab(RoomType type, System.Random rng)
+    {
+        switch (type)
+        {
+            case RoomType.Entrance: return entrancePrefab;
+            case RoomType.Treasure: return treasurePrefab;
+            case RoomType.Boss: return bossPrefab;
+            default: return normalPrefabs[rng.Next(normalPrefabs.Length)];
+        }
+    }
+
+    private void PlacePlayer()
+    {
+        Transform target = player;
+        if (target == null)
+        {
+            var pc = FindFirstObjectByType<PlayerController>();
+            if (pc != null) target = pc.transform;
+        }
+        if (target == null)
+        {
+            Debug.LogWarning("[Dungeon] 플레이어를 찾지 못해 배치하지 못했습니다. Player 칸을 연결하세요.", this);
+            return;
+        }
+
+        var entranceRoom = GetSpawnedRoom(Entrance.Position);
+        Vector3 pos = entranceRoom.transform.position;
+        Quaternion rot = Quaternion.identity;
+        if (entranceRoom.PlayerSpawn != null)
+        {
+            pos = entranceRoom.PlayerSpawn.position;
+            rot = entranceRoom.PlayerSpawn.rotation;
+        }
+        else
+        {
+            Debug.LogWarning("[Dungeon] 입구방에 PlayerSpawn 이 없어 방 중앙에 배치합니다.", this);
+        }
+
+        // CharacterController 는 켜진 채로 transform 을 옮기면 되돌려지므로 잠깐 끈다
+        var cc = target.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        target.SetPositionAndRotation(pos + Vector3.up * 0.05f, rot);
+        if (cc != null) cc.enabled = true;
+        Physics.SyncTransforms();
+    }
+
+    private void SpawnTestMonsters()
+    {
+        if (testMonsterPrefab == null) return;
+
+        // 몬스터 콜라이더가 NavMesh 에 구멍을 내지 않도록 방(GeneratedRooms) 밖에 따로 모은다
+        monsterParent = new GameObject("SpawnedMonsters").transform;
+
+        var rng = new System.Random(unchecked(lastSeed * 17 + 3));
+        int count = 0, failed = 0;
+
+        foreach (var data in rooms)
+        {
+            if (data.Type == RoomType.Entrance) continue;
+            if (!spawnedRooms.TryGetValue(data.Position, out var room)) continue;
+
+            foreach (var sp in room.MonsterSpawns)
+            {
+                if (rng.NextDouble() > testMonsterChance) continue;
+
+                if (NavMesh.SamplePosition(sp.position, out var hit, 2f, NavMesh.AllAreas))
+                {
+                    Instantiate(testMonsterPrefab, hit.position,
+                                Quaternion.Euler(0f, sp.eulerAngles.y, 0f), monsterParent);
+                    count++;
+                }
+                else
+                {
+                    failed++;
+                    Debug.LogWarning($"[Dungeon] {room.name}/{sp.name} 근처에 NavMesh 가 없어 몬스터를 만들지 못했습니다.", sp);
+                }
+            }
+        }
+
+        Debug.Log($"[Dungeon] 검증용 몬스터 {count}마리 생성" + (failed > 0 ? $" (실패 {failed})" : ""));
+    }
+
+    /// <summary>입구방에서 모든 방 중앙까지 NavMesh 경로가 이어지는지 확인한다 (문 구멍/Blocker 점검용).</summary>
+    private void ValidateNavigation()
+    {
+        var entranceRoom = GetSpawnedRoom(Entrance.Position);
+        if (!NavMesh.SamplePosition(entranceRoom.transform.position, out var start, 3f, NavMesh.AllAreas))
+        {
+            Debug.LogError("[Dungeon] 입구방에서 NavMesh 를 찾지 못했습니다. NavMeshSurface 설정(Include Layers, Collect Objects)을 확인하세요.");
+            return;
+        }
+
+        var path = new NavMeshPath();
+        int bad = 0;
+        foreach (var data in rooms)
+        {
+            var room = GetSpawnedRoom(data.Position);
+            bool ok = false;
+
+            foreach (var dir in DirectionUtil.All)
+            {
+                if (!data.HasDoor(dir)) continue;
+                var door = room.transform.Find($"Doors/Door_{dir}");
+                if (door == null) continue;
+
+                if (NavMesh.SamplePosition(door.position, out var end, 2f, NavMesh.AllAreas)
+                    && NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path)
+                    && path.status == NavMeshPathStatus.PathComplete)
+                {
+                    ok = true;
+                    break;
+                }
+            }
+
+            if (!ok)
+            {
+                bad++;
+                Debug.LogError($"[Dungeon] NavMesh 로 도달할 수 없는 방: {data} / {room.name}", room);
+            }
+        }
     }
 
     // ---------- 설정 검사 ----------

@@ -84,6 +84,7 @@ GameObject:
   - component: {fileID: 1093841400300495050}
   - component: {fileID: 7268360641626860172}
   - component: {fileID: 8801659046619343253}
+  - component: {fileID: -5088499380466499622}
   m_Layer: 7
   m_Name: Skeleton
   m_TagString: Untagged
@@ -188,7 +189,7 @@ MonoBehaviour:
   groggyTime: 1.5
   groggyDamageMultiplier: 2
   animator: {fileID: 0}
-  destroyOnDeath: 1
+  destroyOnDeath: 0
   deathStateName: Death
   deathLingerTime: 1.5
   deathMaxWait: 8
@@ -215,6 +216,31 @@ CapsuleCollider:
   m_Height: 2.7102408
   m_Direction: 1
   m_Center: {x: 0, y: 0.8551204, z: 0}
+--- !u!114 &-5088499380466499622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5067191119731201025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2aec9c2dcf0b4843a4e91927cf8977f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootContainer
+  lootTable: {fileID: 11400000, guid: 094feab0ecf6abc4f811d0a09aabe878, type: 2}
+  rollOnDeath: 1
+  debugItems: []
+  title: "\uC2DC\uCCB4"
+  prompt: "\uC2DC\uCCB4 \uB4A4\uC9C0\uAE30"
+  interactDuration: 1.5
+  interactPoint: {fileID: 0}
+  disableCollidersOnDeath: 1
+  corpseLifetime: 120
+  emptyCorpseLinger: 3
+  destroyWhenEmpty: 1
+  emptyDestroyDelay: 1.5
+  logEvents: 1
 --- !u!1001 &941788024629770558
 PrefabInstance:
   m_ObjectHideFlags: 0

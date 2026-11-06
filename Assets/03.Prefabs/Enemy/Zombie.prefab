@@ -1,5 +1,58 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2863693076644336878
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8361342663659611092}
+  - component: {fileID: 8567090654088868920}
+  m_Layer: 9
+  m_Name: LootTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8361342663659611092
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2863693076644336878}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4006722640851688451}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &8567090654088868920
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2863693076644336878}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4602311219124537810
 GameObject:
   m_ObjectHideFlags: 0
@@ -85,6 +138,7 @@ GameObject:
   - component: {fileID: 5356499219471530256}
   - component: {fileID: 3353462934821084121}
   - component: {fileID: 8035215092461354004}
+  - component: {fileID: -826663156631861907}
   m_Layer: 7
   m_Name: Zombie
   m_TagString: Untagged
@@ -106,6 +160,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2414057531481336667}
+  - {fileID: 8361342663659611092}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6109889893631758037
@@ -189,7 +244,7 @@ MonoBehaviour:
   groggyTime: 2.5
   groggyDamageMultiplier: 2
   animator: {fileID: 0}
-  destroyOnDeath: 1
+  destroyOnDeath: 0
   deathStateName: Death
   deathLingerTime: 1.5
   deathMaxWait: 8
@@ -230,6 +285,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 100
   logDamage: 1
+--- !u!114 &-826663156631861907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9072515451868589991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2aec9c2dcf0b4843a4e91927cf8977f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootContainer
+  lootTable: {fileID: 11400000, guid: 094feab0ecf6abc4f811d0a09aabe878, type: 2}
+  rollOnDeath: 1
+  debugItems: []
+  title: "\uC2DC\uCCB4"
+  prompt: "\uC2DC\uCCB4 \uB4A4\uC9C0\uAE30"
+  interactDuration: 1.5
+  interactPoint: {fileID: 0}
+  disableCollidersOnDeath: 1
+  corpseLifetime: 120
+  emptyCorpseLinger: 3
+  destroyWhenEmpty: 1
+  emptyDestroyDelay: 1.5
+  logEvents: 1
 --- !u!1001 &6412101291167351025
 PrefabInstance:
   m_ObjectHideFlags: 0

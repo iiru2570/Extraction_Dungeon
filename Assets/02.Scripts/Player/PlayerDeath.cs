@@ -31,6 +31,12 @@ public class PlayerDeath : MonoBehaviour
     [Tooltip("플레이어 Animator 에 이 이름의 Trigger 가 있으면 사망 시 발동 (없으면 무시)")]
     [SerializeField] private string dieTrigger = "Die";
 
+    [Header("Loss (Day 6)")]
+    [Tooltip("사망 시 가방 + 장착 장비를 전부 삭제하고 기본 장비를 무료로 지급")]
+    [SerializeField] private bool loseItemsOnDeath = true;
+    [Tooltip("비우면 같은 오브젝트에서 자동 검색")]
+    [SerializeField] private Inventory inventory;
+
     public bool IsDead { get; private set; }
 
     // Day 6(소지품 삭제), Day 10(RunManager) 등이 구독
@@ -45,6 +51,7 @@ public class PlayerDeath : MonoBehaviour
         health = GetComponent<Health>();
         controller = GetComponent<PlayerController>();
         animator = GetComponentInChildren<Animator>();
+        if (inventory == null) inventory = GetComponent<Inventory>();
     }
 
     private void Start()
@@ -87,6 +94,14 @@ public class PlayerDeath : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+
+        // 사망 시 전 소지품 손실 + 기본 장비 무료 지급 (Day 6)
+        if (loseItemsOnDeath && inventory != null)
+        {
+            inventory.Clear();
+            inventory.GiveStartingGear();
+            Debug.Log("[Player] 소지품 전부 손실, 기본 장비 지급");
+        }
 
         Died?.Invoke();
         StartCoroutine(ShowGameOver());

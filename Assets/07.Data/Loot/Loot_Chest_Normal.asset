@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37c6ad9a7a7ffbb43b4632df51fcc36e, type: 3}
+  m_Name: Loot_Chest_Normal
+  m_EditorClassIdentifier: Assembly-CSharp::LootTable
+  minRolls: 1
+  maxRolls: 3
+  nothingWeight: 0
+  entries:
+  - item: {fileID: 11400000, guid: 73016490209bc3d4687feff95d9a8a0d, type: 2}
+    weight: 4
+  - item: {fileID: 11400000, guid: c189241b19b1b51418c70119f8ee8832, type: 2}
+    weight: 2
+  - item: {fileID: 11400000, guid: 475ac8e9e126e8d4ba9f124428a06624, type: 2}
+    weight: 2
+  - item: {fileID: 11400000, guid: 22df4b5cd81da6b4c88efd770638e8e6, type: 2}
+    weight: 2
+  - item: {fileID: 11400000, guid: a3d61092826868a46aad5c7e361f5a8a, type: 2}
+    weight: 1
+  allowDuplicates: 1
+  extraDrops:
+  - item: {fileID: 11400000, guid: 630774f0488d0854889024adffb791b7, type: 2}
+    chance: 0.15

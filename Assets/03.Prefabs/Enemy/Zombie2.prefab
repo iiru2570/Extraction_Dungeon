@@ -226,7 +226,7 @@ MonoBehaviour:
   groggyTime: 2.5
   groggyDamageMultiplier: 2
   animator: {fileID: 0}
-  destroyOnDeath: 1
+  destroyOnDeath: 0
   deathStateName: Death
   deathLingerTime: 1.5
   deathMaxWait: 8

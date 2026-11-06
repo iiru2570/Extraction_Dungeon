@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a806ac0497478740868756a57e137d4, type: 3}
   m_Name: Item_Bandage
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemName: "\uCCA0\uAC80"
+  itemName: "\uBD95\uB300"
   icon: {fileID: 0}
   grade: 0
   itemType: 2

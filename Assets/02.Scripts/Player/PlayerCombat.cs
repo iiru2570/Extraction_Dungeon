@@ -71,6 +71,9 @@ public class PlayerCombat : MonoBehaviour
     private static readonly int AttackEndHash = Animator.StringToHash("AttackEnd");
     private static readonly int CounterHash = Animator.StringToHash("Counter");
 
+    // 장비(무기)에 따른 피해 배율. EquipmentStats 가 설정합니다. 1 = 기본
+    public float DamageMultiplier { get; set; } = 1f;
+
     // 공격 모션 중인지 (PlayerParry 등 다른 스크립트가 참조)
     public bool IsAttacking { get; private set; }
 
@@ -297,7 +300,7 @@ public class PlayerCombat : MonoBehaviour
         if (!windowOpen)
         {
             windowOpen = true;
-            weapon.BeginSwing(data.damage, data.rehitOnReenter);
+            weapon.BeginSwing(data.damage * DamageMultiplier, data.rehitOnReenter);
         }
 
         SetWeaponActive(true);

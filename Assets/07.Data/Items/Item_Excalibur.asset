@@ -17,7 +17,7 @@ MonoBehaviour:
   grade: 2
   itemType: 0
   description: 
-  attackPower: 22
+  attackPower: 20
   defense: 0
   moveSpeedMultiplier: 1
   healAmount: 30

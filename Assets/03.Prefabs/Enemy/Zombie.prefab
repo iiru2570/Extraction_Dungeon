@@ -297,7 +297,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2aec9c2dcf0b4843a4e91927cf8977f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LootContainer
-  lootTable: {fileID: 11400000, guid: 094feab0ecf6abc4f811d0a09aabe878, type: 2}
+  lootTable: {fileID: 11400000, guid: f070ef6d933844a4c804cd4992c48ef8, type: 2}
   rollOnDeath: 1
   debugItems: []
   title: "\uC2DC\uCCB4"

@@ -20,4 +20,4 @@ MonoBehaviour:
   attackPower: 10
   defense: 0
   moveSpeedMultiplier: 1
-  healAmount: 30
+  healAmount: 35

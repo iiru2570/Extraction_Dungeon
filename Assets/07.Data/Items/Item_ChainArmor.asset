@@ -18,6 +18,6 @@ MonoBehaviour:
   itemType: 1
   description: 
   attackPower: 10
-  defense: 5
+  defense: 15
   moveSpeedMultiplier: 0.95
   healAmount: 30

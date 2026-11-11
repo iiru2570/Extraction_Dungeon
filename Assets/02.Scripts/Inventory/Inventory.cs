@@ -164,6 +164,17 @@ public class Inventory : MonoBehaviour
         return false;
     }
 
+    // 장착 슬롯의 아이템을 하나 소모 (붕대 사용 등). 반환 = 소모한 아이템, 없으면 null
+    public ItemData ConsumeEquipped(EquipSlot slot)
+    {
+        ItemData item = equipped[(int)slot];
+        if (item == null) return null;
+        equipped[(int)slot] = null;
+        if (logEvents) Debug.Log($"[Inventory] 사용: {item.ItemName} ({slot})");
+        Changed?.Invoke();
+        return item;
+    }
+
     public bool HasItemOfType(ItemType type)
     {
         for (int i = 0; i < BackpackSize; i++)

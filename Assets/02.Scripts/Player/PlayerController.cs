@@ -26,6 +26,9 @@ public class PlayerController : MonoBehaviour
     public float VerticalVelocity => verticalVelocity;
     public float MoveSpeedNormalized { get; private set; }   // 0 ~ 1
 
+    // 장비(방어구)에 따른 이동속도 배율. EquipmentStats 가 설정합니다. 1 = 기본
+    public float MoveSpeedMultiplier { get; set; } = 1f;
+
     // true 이면 이동/점프 입력을 무시합니다 (공격 중 등). 중력은 계속 적용됩니다.
     public bool MovementLocked { get; set; }
 
@@ -87,7 +90,7 @@ public class PlayerController : MonoBehaviour
             verticalVelocity = -2f;
         verticalVelocity += gravity * Time.deltaTime;
 
-        Vector3 velocity = moveDir * moveSpeed;
+        Vector3 velocity = moveDir * (moveSpeed * MoveSpeedMultiplier);
         velocity.y = verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
 

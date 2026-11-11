@@ -124,6 +124,67 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5386428417035901, guid: a3df9bf0fcb4c724fad0a3805a7729c0, type: 3}
   m_PrefabInstance: {fileID: 967659072}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &25145165
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 25145167}
+  - component: {fileID: 25145166}
+  m_Layer: 0
+  m_Name: RoomSpanwer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &25145166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 25145165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9615b93c38428f4abba7f6071becfd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoomSpawner
+  generator: {fileID: 0}
+  normalMonsterPool:
+  - prefab: {fileID: 9072515451868589991, guid: 1be3e1d969ed0624d808eac835fb2b6b, type: 3}
+    weight: 3
+  - prefab: {fileID: 5067191119731201025, guid: e7313bfbe9e362f4681177c939649d50, type: 3}
+    weight: 3
+  - prefab: {fileID: 1146596603855898349, guid: e280e2de4a8b1564598035d1db95d7f0, type: 3}
+    weight: 2
+  monsterChance: 0.7
+  normalChestPrefab: {fileID: 678334875153943541, guid: 3c3af822b40dd7c49aa8b85f2d0908dd, type: 3}
+  normalChestChance: 0.4
+  rareChestPrefab: {fileID: 678334875153943541, guid: 95c024bd190817c42bd66e9bb694613f, type: 3}
+  rareChestChance: 0.85
+  eliteGuardianPrefab: {fileID: 5067191119731201025, guid: 87722f1156ec5ca42a5f1871c94f6e03, type: 3}
+  chestYOffset: 0.4
+  navSampleDistance: 2
+  logEvents: 1
+--- !u!4 &25145167
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 25145165}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 115.06083, y: 0.00001, z: 1577.3612}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &51117751
 GameObject:
   m_ObjectHideFlags: 0
@@ -254,7 +315,7 @@ MonoBehaviour:
   roomParent: {fileID: 1437618163}
   navMesh: {fileID: 1437618161}
   player: {fileID: 0}
-  testMonsterPrefab: {fileID: 9072515451868589991, guid: 1be3e1d969ed0624d808eac835fb2b6b, type: 3}
+  testMonsterPrefab: {fileID: 0}
   testMonsterChance: 1
   showLabels: 1
 --- !u!4 &164561740
@@ -843,3 +904,4 @@ SceneRoots:
   - {fileID: 231018638}
   - {fileID: 967659072}
   - {fileID: 51117754}
+  - {fileID: 25145167}

@@ -10413,6 +10413,8 @@ GameObject:
   - component: {fileID: 8393993702318140641}
   - component: {fileID: 7134888396602891283}
   - component: {fileID: 2017916387223504748}
+  - component: {fileID: 824793576023723612}
+  - component: {fileID: 3221798803041578386}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -10799,6 +10801,8 @@ MonoBehaviour:
   gameOverDelay: 1.5
   disableOnDeath: []
   dieTrigger: Die
+  loseItemsOnDeath: 1
+  inventory: {fileID: 0}
 --- !u!114 &7134888396602891283
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10840,6 +10844,38 @@ MonoBehaviour:
   cancelOnMove: 1
   moveCancelDistance: 0.3
   cancelOnCombat: 1
+  logEvents: 1
+--- !u!114 &824793576023723612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8939569490815071896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d4b763c73a966b45aebf6bde19d0e7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConsumableUse
+  slot1Key: 41
+  slot2Key: 42
+  cooldown: 1
+  allowWhenFull: 0
+  logEvents: 1
+--- !u!114 &3221798803041578386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8939569490815071896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00687da767d369946909d8c1f0ca96ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EquipmentStats
+  baseAttackPower: 10
+  defenseScale: 100
   logEvents: 1
 --- !u!1 &8983622390962387960
 GameObject:
